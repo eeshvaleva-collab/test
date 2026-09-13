@@ -62,7 +62,7 @@ class User:
             raise ValueError(
                 f"You can't take any books. You are debtor!!!!!!!!!"
             )
-        if self.canBorrow:
+        if not self.canBorrow:
             raise ValueError(
                 f"Max limit exeeded. You can't take any new books. You should return at least one"
             )
@@ -79,9 +79,10 @@ class User:
 
 
 class Book:
-    def __init__(self, title, author):
-        self.title = title.lower().strip()
-        self.author = author.lower().strip()
+    def __init__(self, title, author, genre):
+        self.title = title
+        self.author = author
+        self.genre = genre
         self._borrowed_date = None
 
         self._isbn = generate_unique_id(f"{self.author}{self.title}{datetime.now()}")
@@ -95,7 +96,7 @@ class Book:
         return self._borrowed_date is None
 
     @property
-    def borrowed_date(self)
+    def borrowed_date(self):
         return self._borrowed_date
 
     def borrow_book(self):
@@ -117,12 +118,16 @@ class Library:
     def users(self):
         return self._users
 
+    @property
+    def books(self):
+        return self._books
+
     def register_user(self, name, email, type):
         email_norm = email.strip().lower()
         type_norm = type.strip().lower()
         name.norm = name.strip().lower()
 
-        if any(user.email == email_normalized for user in self.users.values()):
+        if any(user.email == email_norm for user in self.users.values()):
                 raise ValueError(f"user with email {email_norm} has been alreade registered")
 
         new_user = User(name = name_norm, email = email_norm, type = type_norm)
@@ -130,7 +135,7 @@ class Library:
 
         print(f"User {name} has been succesfully regirestered in the library")
 
-    def find_user(user_id):
+    def find_user(self, user_id):
         user = self._users.get(user_id) 
         if user is None:
             print("There is no such user  in the library")
@@ -139,5 +144,42 @@ class Library:
         
         return user
     
+    def add_book(self, title, author, genre="other"):
+        title_norm = title.strip().lower()
+        author_norm = author.strip().lower()
+        genre_norm = genre.strip().lower()
 
-    
+        new_book = Book(title_norm, author_norm, genre_norm)
+        self._books[new_book.isbn] = new_book
+
+    def find_book(self, isbn):
+        book = self._book.get(isbn) 
+        if user is None:
+            print("There is no such book in the library")
+        else:
+            print("Book is present in the library")
+        
+        return book
+
+    def remove_book(self, isbn):
+        if isbn in self._books:
+            del self._books[isbn]
+            print("The book has been removed")
+        else:
+            raise ValueError(f"There is no book with id {isbn}")
+
+    def borrowBook(userId, isbn):
+        user = self.find_user(userId)
+        book = self.find_book(isbn)
+        if user and book:
+            user.take_book(book)
+
+    def returnBook(userId, isbn):
+        user = self.find_user(userId)
+        book = self.find_book(isbn)
+        if user and book:
+            user.return_book(book)
+
+    def getOverdueBooks(self):
+        overdue_books = []
+        for book in self._books:
