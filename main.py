@@ -1,185 +1,168 @@
-from datetime import datetime
-from utils import generate_unique_id
+from classes import Library
 
+class LibraryConsole:
+    def __init__(self, library_instance):
+        self.library = library_instance
 
-class User:
-    _USER_CONFIGS = {
-        "student": {
-            "max_books": 3,
-            "time_limit": 14,
-        },
-        "faculty": {
-            "max_books": 10,
-            "time_limit": 30,
-        },
-        "guest": {
-            "max_books": 1,
-            "time_limit": 7,
-        },
-    }
-    def __init__(self, name, email, type):
-        self._name = name
-        self._email = email
-        self._type = type
-        self._borrowed_books = set()
+    def run(self):
+        while True:
+            self.show_menu()
 
-        if self._type not in User._USER_CONFIGS:
-            raise ValueError(
-                f"Invalid user type - '{type}'. Available types: {", ".join(User._USER_CONFIGS)}"
-            )
+            match input("Enter option: ").strip():
+                case "1":
+                    self.book_menu()
+                case "2":
+                    self.user_menu()
+                case "3":
+                    self.borrowing_menu()
+                case "0":
+                    break
+                case _:
+                    print("Invalid option")
 
-        self._userId = generate_unique_id(self._email)
-        self._max_books = User._USER_CONFIGS[self._type]["max_books"]
-        self._time_limit = User._USER_CONFIGS[self._type]["time_limit"]
+    @staticmethod
+    def show_menu():
+        print("""
+=== Library Management ===
+1. Book Management
+2. User Management
+3. Borrowing Operations
+0. Exit
+""")
 
-    @property
-    def userId(self):
-        return self._userId
+    @staticmethod
+    def normalize(prompt):
+        return input(prompt).strip().lower()
 
-    @property
-    def borrowed_books(self):
-        return self._borrowed_books
+    def book_menu(self):
+        print("""
+--- Book Management ---
+1. Add Book
+2. Remove Book
+3. Search Books
+0. Back
+""")
+        match input("Enter option: ").strip():
+            case "1":
+                self.add_book()
+            case "2":
+                self.remove_book()
+            case "3":
+                self.search_books()
+            case "0":
+                return
+            case _:
+                print("Invalid option")
 
-    @property
-    def max_books(self):
-        return self._max_books
-    
-    @property
-    def time_limit(self):
-        return self._time_limit
+    def add_book(self):
+        title = self.normalize("Enter title: ")
+        author = self.normalize("Enter author: ")
+        genre = self.normalize("Enter genre: ")
 
-    @property
-    def canBorrow(self):
-        return len(self.borrowed_books) < self.max_books
+        try:
+            self.library.add_book(title, author, genre or "other")
+            print("Book added")
+        except ValueError as error:
+            print(f"Failed to add book: {error}")
 
-    @property
-    def is_debtor(self):
-        current_time = datetime.now()
-        return any((current_time - book.borrowed_date).days > self.time_limit for book in borrowed_books)
+    def remove_book(self):
+        isbn = self.normalize("Enter Book ISBN: ")
 
-    def take_book(self, book):
-        if self.is_debtor:
-            raise ValueError(
-                f"You can't take any books. You are debtor!!!!!!!!!"
-            )
-        if not self.canBorrow:
-            raise ValueError(
-                f"Max limit exeeded. You can't take any new books. You should return at least one"
-            )
-        book.borrow_book()
-        self._borrowed_books.add(book.isbn)
-    
-    def return_book(self, book):
-        if book.isbn not in self._borrowed_books:
-            raise ValueError(
-                f"You can't return this book. You don't have it"
-            )
-        book.return_book()
-        self._borrowed_books.remove(book.isbn)
+        try:
+            self.library.remove_book(isbn)
+            print("Book removed")
+        except ValueError as error:
+            print(f"Failed to remove book: {error}")
 
+    def search_books(self):
+        query = self.normalize("Enter search query: ")
+        self.library.search_books(query)
 
-class Book:
-    def __init__(self, title, author, genre):
-        self.title = title
-        self.author = author
-        self.genre = genre
-        self._borrowed_date = None
+    def user_menu(self):
+        print("""
+--- User Management ---
+1. Register User
+2. Find User
+0. Back
+""")
+        match input("Enter option: ").strip():
+            case "1":
+                self.register_user()
+            case "2":
+                self.find_user()
+            case "0":
+                return
+            case _:
+                print("Invalid option")
+    def register_user(self):
+        name = self.normalize("Enter user name: ")
+        email = self.normalize("Enter user email: ")
+        user_type = self.normalize("Enter user user_type (student/faculty/guest): ")
+        try:
+            user_id = self.library.register_user(name, email, user_type)
+            print(f"Success! User registered. Your User ID is: {user_id}")
+        except ValueError as e:
+            print(f"Registration failed: {e}")
+                    
+    def find_user(self):
+        user_id = self.normalize("Enter User ID to find: ")
+        user = self.library.find_user(user_id)
+        if user:
+            print(f"\nName: {user.name}\nEmail: {user.email}\nUser type: {user.user_type}\n")
+            print(f"Borrowed books (ISBNs): {user.borrowed_books if user.borrowed_books else 'None'}\n")
 
-        self._isbn = generate_unique_id(f"{self.author}{self.title}{datetime.now()}")
-
-    @property
-    def isbn(self):
-        return self._isbn
-    
-    @property
-    def is_vacant(self):
-        return self._borrowed_date is None
-
-    @property
-    def borrowed_date(self):
-        return self._borrowed_date
+    def borrowing_menu(self):
+        print("""
+--- Borrowing Operations ---
+1. Borrow Book
+2. Return Book
+3. Show Overdue Books
+0. Back
+""")
+        
+        match input("Enter option: ").strip():
+            case "1":
+                self.borrow_book()
+            case "2":
+                self.return_book()
+            case "3":
+                self.get_overdue_books()
+            case "0":
+                return
+            case _:
+                print("Invalid option")
 
     def borrow_book(self):
-        if not self.is_vacant:
-            raise ValueError(f"This book '{self.title}' is not available!")
-        self._borrowed_date = datetime.now()
-
+        user_id = self.normalize("Enter User ID: ")
+        isbn = self.normalize("Enter Book ISBN: ")
+        try:
+            self.library.borrow_book(user_id, isbn)
+            print("The book has been checked out")
+        except ValueError as e:
+            print(f"Borrowing failed: {e}")
+            
     def return_book(self):
-        if self.is_vacant:
-            return
-        self._borrowed_date = None
-        
-class Library:
-    def __init__(self):
-        self._users = {}
-        self._books = {}
-
-    @property
-    def users(self):
-        return self._users
-
-    @property
-    def books(self):
-        return self._books
-
-    def register_user(self, name, email, type):
-        email_norm = email.strip().lower()
-        type_norm = type.strip().lower()
-        name.norm = name.strip().lower()
-
-        if any(user.email == email_norm for user in self.users.values()):
-                raise ValueError(f"user with email {email_norm} has been alreade registered")
-
-        new_user = User(name = name_norm, email = email_norm, type = type_norm)
-        self._users[new_user.id] = new_user
-
-        print(f"User {name} has been succesfully regirestered in the library")
-
-    def find_user(self, user_id):
-        user = self._users.get(user_id) 
-        if user is None:
-            print("There is no such user  in the library")
+        user_id = self.normalize("Enter User ID: ")
+        isbn = self.normalize("Enter Book ISBN: ")
+        try:
+            self.library.return_book(user_id, isbn)
+            print("The book has been successfully returned")
+        except ValueError as e:
+            print(f"Return failed: {e}")
+            
+    def get_overdue_books(self):
+        overdue_records = self.library.get_overdue_books()
+        if not overdue_records:
+            print("There are no overdue books at the moment")
         else:
-            print("User is registered in the library")
-        
-        return user
+            print(f"\nFound {len(overdue_records)} overdue record(s):")
+            for record in overdue_records:
+                print(f" - User ID: {record.user_id} | Book ISBN: {record.isbn} | Borrowed on: {record.borrowed_date.strftime('%Y-%m-%d %H:%M')}")
+                        
+            
+if __name__ == "__main__":
+    library = Library() 
     
-    def add_book(self, title, author, genre="other"):
-        title_norm = title.strip().lower()
-        author_norm = author.strip().lower()
-        genre_norm = genre.strip().lower()
-
-        new_book = Book(title_norm, author_norm, genre_norm)
-        self._books[new_book.isbn] = new_book
-
-    def find_book(self, isbn):
-        book = self._book.get(isbn) 
-        if user is None:
-            print("There is no such book in the library")
-        else:
-            print("Book is present in the library")
-        
-        return book
-
-    def remove_book(self, isbn):
-        if isbn in self._books:
-            del self._books[isbn]
-            print("The book has been removed")
-        else:
-            raise ValueError(f"There is no book with id {isbn}")
-
-    def borrowBook(userId, isbn):
-        user = self.find_user(userId)
-        book = self.find_book(isbn)
-        if user and book:
-            user.take_book(book)
-
-    def returnBook(userId, isbn):
-        user = self.find_user(userId)
-        book = self.find_book(isbn)
-        if user and book:
-            user.return_book(book)
-
-    def getOverdueBooks(self):
-        overdue_books = []
-        for book in self._books:
+    console = LibraryConsole(library)
+    
+    console.run()

@@ -17,20 +17,20 @@ class User:
             "time_limit": 7,
         },
     }
-    def __init__(self, name, email, type):
+    def __init__(self, name, email, user_type):
         self._name = name
         self._email = email
-        self._type = type
+        self._user_type = user_type
         self._borrowed_books = set()
 
-        if self._type not in User._USER_CONFIGS:
+        if self._user_type not in User._USER_CONFIGS:
             raise ValueError(
-                f"Invalid user type - '{type}'. Available types: {', '.join(User._USER_CONFIGS)}"
+                f"Invalid user type - '{user_type}'. Available types: {', '.join(User._USER_CONFIGS)}"
             )
 
         self._user_id = generate_unique_id(self._email)
-        self._max_books = User._USER_CONFIGS[self._type]["max_books"]
-        self._time_limit = User._USER_CONFIGS[self._type]["time_limit"]
+        self._max_books = User._USER_CONFIGS[self._user_type]["max_books"]
+        self._time_limit = User._USER_CONFIGS[self._user_type]["time_limit"]
 
     @property
     def name(self):
@@ -45,8 +45,12 @@ class User:
         return self._user_id
 
     @property
+    def user_type(self):
+        return self._user_type
+
+    @property
     def borrowed_books(self):
-        return self._borrowed_books
+        return self._borrowed_books.copy()
 
     @property
     def max_books(self):
@@ -57,11 +61,11 @@ class User:
         return self._time_limit
 
     @property
-    def canBorrow(self):
+    def can_borrow(self):
         return len(self.borrowed_books) < self.max_books
 
     def take_book(self, book):
-        if not self.canBorrow:
+        if not self.can_borrow:
             raise ValueError(
                 f"Max limit exeeded. You can't take any new books. You should return at least one"
             )
@@ -126,45 +130,39 @@ class Library:
 
     @property
     def users(self):
-        return self._users
+        return self._users.copy()
 
     @property
     def books(self):
-        return self._books
+        return self._books.copy()
 
-    def register_user(self, name, email, type):
-        email_norm = email.strip().lower()
-        type_norm = type.strip().lower()
-        name_norm = name.strip().lower()
+    def register_user(self, name, email, user_type):
+        if any(user.email == email for user in self.users.values()):
+                raise ValueError(f"user with email '{email}' has been alreade registered")
 
-        if any(user.email == email_norm for user in self.users.values()):
-                raise ValueError(f"user with email {email_norm} has been alreade registered")
-
-        new_user = User(name = name_norm, email = email_norm, type = type_norm)
+        new_user = User(name = name, email = email, user_type = user_type)
         self._users[new_user.user_id] = new_user
 
         print(f"User {name} has been succesfully regirestered in the library")
+        return new_user.user_id
 
     def find_user(self, user_id):
         user = self._users.get(user_id) 
         if user is None:
-            print("There is no such user  in the library")
+            print("There is no such user in the library")
         else:
             print("User is registered in the library")
         
         return user
     
     def add_book(self, title, author, genre="other"):
-        title_norm = title.strip().lower()
-        author_norm = author.strip().lower()
-        genre_norm = genre.strip().lower()
-
-        new_book = Book(title_norm, author_norm, genre_norm)
+        new_book = Book(title, author, genre)
         self._books[new_book.isbn] = new_book
+        print("Book has been added to the library")
 
     def find_book(self, isbn):
-        book = self._book.get(isbn) 
-        if user is None:
+        book = self._books.get(isbn) 
+        if book is None:
             print("There is no such book in the library")
         else:
             print("Book is present in the library")
@@ -173,64 +171,57 @@ class Library:
 
     def remove_book(self, isbn):
         if isbn in self._books:
-            del self._books[isbn]
-            print("The book has been removed")
+            if self._books[isbn].is_vacant:
+                del self._books[isbn]
+                print("The book has been removed")
+            else:
+                raise ValueError(f"This book is currently borrowed")
         else:
             raise ValueError(f"There is no book with id {isbn}")
 
-    def borrowBook(user_id, isbn):
+    def borrow_book(self, user_id, isbn):
         user = self.find_user(user_id)
+        if not user:
+            raise ValueError(f"There is no such user in the library")
         book = self.find_book(isbn)
-        if user and book:
-            user.take_book(book)
-            records[isbn] = Record(user_id, isbn)
-
-    def borrowBook(self, user_id, isbn):
-        user = self.find_user(user_id)
-        book = self.find_book(isbn)
+        if not book:
+            raise ValueError(f"There is no such book in the library")
         
-        if user and book:
-            if self.is_user_debtor(user_id):
-                raise ValueError(f"User {user.name} is a debtor! Cannot borrow more books")
-            user.take_book(book)
-            self._records[isbn] = Record(user.user_id, book.isbn, book.borrowed_date, user.time_limit)
+        if self.is_user_debtor(user_id):
+            raise ValueError(f"User {user.name} is a debtor! Cannot borrow more books!!!")
+        user.take_book(book)
+        self._records[isbn] = Record(user.user_id, book.isbn, book.borrowed_date, user.time_limit)
 
     def is_user_debtor(self, user_id):
         return any(record.user_id == user_id and record.is_overdue for record in self._records.values())
 
-
-    def returnBook(user_id, isbn):
+    def return_book(self, user_id, isbn):
         user = self.find_user(user_id)
         book = self.find_book(isbn)
         if user and book:
             user.return_book(book)
+            del self._records[isbn]
 
-    def getOverdueBooks(self):
+    def get_overdue_books(self):
         overdue_books = []
         for isbn, record in self._records.items():
-            if record.is_overdue():
+            if record.is_overdue:
                 overdue_books.append(record)
+        return overdue_books
 
 
     def search_books(self, query):
-        query_norm = query.strip().lower()
-    
-        if not query_norm:
+        if not query:
             return []
 
-        matched_books = [
-            book for book in self._books.values()
-            if query_norm in book.title.lower() 
-            or query_norm in book.author.lower() 
-            or query_norm in book.genre.lower()
-        ]
+        matched_books = [book for book in self._books.values() if query in book.title or query in book.author or query in book.genre]
         
         if matched_books:
             print(f"Found {len(matched_books)} book(s) for query '{query}':")
             for book in matched_books:
-                status = "Available" if b.is_vacant else "Borrowed"
-                print(f" - {b.title.title()} by {b.author.title()} [{status}]")
+                status = "available" if book.is_vacant else "borrowed"
+                print(f" - {book.title} by {book.author} [{status}]")
         else:
-            print(f"No books found for query '{query}'.")
+            print(f"No books matched your query '{query}'.")
 
         return matched_books
