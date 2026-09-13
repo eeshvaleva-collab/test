@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from utils import generate_unique_id
 
 
 class User:
@@ -17,17 +17,18 @@ class User:
           "time_limit": 7,
       },
   }
-  def __init__(self, name, userId, email, type):
+  def __init__(self, name, email, type):
     self._name = name.lower().strip()
-    self._userId = userId
     self._email = email.lower().strip()
     self._type = type.lower().strip()
     self.borrowed_books = {}
 
     if self._type not in User._USER_CONFIGS:
         raise ValueError(
-            f"Тип пользователя '{type}' не поддерживается. Доступные варианты: {", ".join(User._USER_CONFIGS)}"
+            f"Invalid user type - '{type}'. Available types: {", ".join(User._USER_CONFIGS)}"
         )
+
+    self._userId = generate_unique_id(self._email)
     self._max_books = User._USER_CONFIGS[self._type]["max_books"]
     self._time_limit = User._USER_CONFIGS[self._type]["time_limit"]
 
@@ -39,6 +40,7 @@ class User:
     def borowed_books(self):
         return self.borrowed_books
 
+    @property
     def canBorrow(self):
         return 
 
@@ -53,11 +55,12 @@ class User:
 
 
 class Book:
-    def __init__(self, title, author, isbn):
+    def __init__(self, title, author):
         self.title = title.lower().strip()
         self.author = author.lower().strip()
-        self._isbn = isbn
         self._borrowed_date = None
+
+        self._isbn = generate_unique_id(f"{self.author}{self.title}{datetime.now()}")
 
     @property
     def isbn(self):
@@ -82,3 +85,8 @@ class Book:
         self._borrowed_date = None
         
 class Library:
+    def __init__(self):
+        self._users = {}
+        self.books = {}
+
+    
