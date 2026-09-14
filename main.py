@@ -81,7 +81,7 @@ class LibraryConsole:
             print(f"Found {len(matched_books)} book(s) for query '{query}':")
             for book in matched_books:
                 status = "available" if book.is_vacant else "borrowed"
-                print(f"• {book.isbn} {book.title} by {book.author} [{status}]")
+                print(f" • {book.isbn} {book.title} by {book.author} [{status}]")
         else:
             print(f"No books matched your query '{query}'.")
 
@@ -164,7 +164,7 @@ class LibraryConsole:
         else:
             print(f"\nFound {len(overdue_records)} overdue record(s):")
             for record in overdue_records:
-                print(f" - User ID: {record.user_id} | Book ISBN: {record.isbn} | Borrowed on: {record.borrowed_date}")
+                print(f" • User ID: {record.user_id} | Book ISBN: {record.isbn} | Borrowed on: {record.borrowed_date}")
                         
             
 if __name__ == "__main__":
