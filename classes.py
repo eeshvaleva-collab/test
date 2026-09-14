@@ -1,6 +1,5 @@
 from datetime import datetime
-from utils import generate_unique_id
-
+from utils import generate_id
 
 class User:
     _USER_CONFIGS = {
@@ -28,7 +27,7 @@ class User:
                 f"Invalid user type - '{user_type}'. Available types: {', '.join(User._USER_CONFIGS)}"
             )
 
-        self._user_id = generate_unique_id(self._email)
+        self._user_id = generate_id(self._email)
         self._max_books = User._USER_CONFIGS[self._user_type]["max_books"]
         self._time_limit = User._USER_CONFIGS[self._user_type]["time_limit"]
 
@@ -98,7 +97,7 @@ class Book:
         self.genre = genre
         self._borrowed_date = None
 
-        self._isbn = generate_unique_id(f"{self.author}{self.title}{datetime.now()}")
+        self._isbn = generate_id(f"{self.author}{self.title}{datetime.now()}")
 
     @property
     def isbn(self):
@@ -137,37 +136,28 @@ class Library:
         return self._books.copy()
 
     def register_user(self, name, email, user_type):
+        if not name:
+            raise ValueError("name field cannot be empty")
         if any(user.email == email for user in self.users.values()):
-                raise ValueError(f"user with email '{email}' has been alreade registered")
+                raise ValueError(f"user with email '{email}' has been already registered")
 
         new_user = User(name = name, email = email, user_type = user_type)
         self._users[new_user.user_id] = new_user
 
-        print(f"User {name} has been succesfully regirestered in the library")
         return new_user.user_id
 
     def find_user(self, user_id):
-        user = self._users.get(user_id) 
-        if user is None:
-            print("There is no such user in the library")
-        else:
-            print("User is registered in the library")
-        
-        return user
+        return self._users.get(user_id) 
     
     def add_book(self, title, author, genre="other"):
+        if not title or not author:
+            raise ValueError(f"author and title fields are required")
         new_book = Book(title, author, genre)
         self._books[new_book.isbn] = new_book
-        print("Book has been added to the library")
+        return new_book.isbn
 
     def find_book(self, isbn):
-        book = self._books.get(isbn) 
-        if book is None:
-            print("There is no such book in the library")
-        else:
-            print("Book is present in the library")
-        
-        return book
+        return self._books.get(isbn)
 
     def remove_book(self, isbn):
         if isbn in self._books:
@@ -197,10 +187,14 @@ class Library:
 
     def return_book(self, user_id, isbn):
         user = self.find_user(user_id)
+        if not user:
+            raise ValueError(f"There is no such user in the library")
         book = self.find_book(isbn)
-        if user and book:
-            user.return_book(book)
-            del self._records[isbn]
+        if not book:
+            raise ValueError(f"There is no such book in the library")
+
+        user.return_book(book)
+        del self._records[isbn]
 
     def get_overdue_books(self):
         overdue_books = []
@@ -209,19 +203,10 @@ class Library:
                 overdue_books.append(record)
         return overdue_books
 
-
     def search_books(self, query):
         if not query:
-            return []
-
-        matched_books = [book for book in self._books.values() if query in book.title or query in book.author or query in book.genre]
-        
-        if matched_books:
-            print(f"Found {len(matched_books)} book(s) for query '{query}':")
-            for book in matched_books:
-                status = "available" if book.is_vacant else "borrowed"
-                print(f" - {book.title} by {book.author} [{status}]")
+            matched_books = self._books.values()
         else:
-            print(f"No books matched your query '{query}'.")
+            matched_books = [book for book in self._books.values() if query in book.title or query in book.author or query in book.genre]
 
         return matched_books

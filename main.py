@@ -60,8 +60,8 @@ class LibraryConsole:
         genre = self.normalize("Enter genre: ")
 
         try:
-            self.library.add_book(title, author, genre or "other")
-            print("Book added")
+            isbn = self.library.add_book(title, author, genre)
+            print(f"Book has been added to the library with ISBN {isbn}")
         except ValueError as error:
             print(f"Failed to add book: {error}")
 
@@ -76,7 +76,14 @@ class LibraryConsole:
 
     def search_books(self):
         query = self.normalize("Enter search query: ")
-        self.library.search_books(query)
+        matched_bookes = self.library.search_books(query)
+        if matched_bookes:
+            print(f"Found {len(matched_books)} book(s) for query '{query}':")
+            for book in matched_books:
+                status = "available" if book.is_vacant else "borrowed"
+                print(f"• {book.isbn} {book.title} by {book.author} [{status}]")
+        else:
+            print(f"No books matched your query '{query}'.")
 
     def user_menu(self):
         print("""
@@ -97,15 +104,15 @@ class LibraryConsole:
     def register_user(self):
         name = self.normalize("Enter user name: ")
         email = self.normalize("Enter user email: ")
-        user_type = self.normalize("Enter user user_type (student/faculty/guest): ")
+        user_type = self.normalize("Enter user type (student/faculty/guest): ")
         try:
             user_id = self.library.register_user(name, email, user_type)
-            print(f"Success! User registered. Your User ID is: {user_id}")
+            print(f"User registered with ID {user_id}")
         except ValueError as e:
             print(f"Registration failed: {e}")
                     
     def find_user(self):
-        user_id = self.normalize("Enter User ID to find: ")
+        user_id = input("Enter User ID to find: ").strip()
         user = self.library.find_user(user_id)
         if user:
             print(f"\nName: {user.name}\nEmail: {user.email}\nUser type: {user.user_type}\n")
@@ -133,20 +140,20 @@ class LibraryConsole:
                 print("Invalid option")
 
     def borrow_book(self):
-        user_id = self.normalize("Enter User ID: ")
-        isbn = self.normalize("Enter Book ISBN: ")
+        user_id = input("Enter User ID: ").strip()
+        isbn = input("Enter Book ISBN: ").strip()
         try:
             self.library.borrow_book(user_id, isbn)
-            print("The book has been checked out")
+            print("The book has been borrowed")
         except ValueError as e:
             print(f"Borrowing failed: {e}")
             
     def return_book(self):
-        user_id = self.normalize("Enter User ID: ")
-        isbn = self.normalize("Enter Book ISBN: ")
+        user_id = input("Enter User ID: ").strip()
+        isbn = input("Enter Book ISBN: ").strip()
         try:
             self.library.return_book(user_id, isbn)
-            print("The book has been successfully returned")
+            print("The book has been returned")
         except ValueError as e:
             print(f"Return failed: {e}")
             
@@ -157,7 +164,7 @@ class LibraryConsole:
         else:
             print(f"\nFound {len(overdue_records)} overdue record(s):")
             for record in overdue_records:
-                print(f" - User ID: {record.user_id} | Book ISBN: {record.isbn} | Borrowed on: {record.borrowed_date.strftime('%Y-%m-%d %H:%M')}")
+                print(f" - User ID: {record.user_id} | Book ISBN: {record.isbn} | Borrowed on: {record.borrowed_date}")
                         
             
 if __name__ == "__main__":
