@@ -76,8 +76,8 @@ class LibraryConsole:
 
     def search_books(self):
         query = self.normalize("Enter search query: ")
-        matched_bookes = self.library.search_books(query)
-        if matched_bookes:
+        matched_books = self.library.search_books(query)
+        if matched_books:
             print(f"Found {len(matched_books)} book(s) for query '{query}':")
             for book in matched_books:
                 status = "available" if book.is_vacant else "borrowed"

@@ -207,6 +207,6 @@ class Library:
         if not query:
             matched_books = self._books.values()
         else:
-            matched_books = [book for book in self._books.values() if query in book.title or query in book.author or query in book.genre or query in self.isbn]
+            matched_books = [book for book in self._books.values() if query in book.title or query in book.author or query in book.genre or query in book.isbn]
 
         return matched_books
