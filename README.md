@@ -1,11 +1,11 @@
 # test
-##Setup
+## Setup
 
-###Clone the repository:
+### Clone the repository:
 
 git clone <repository-url>
 cd <project-directory>
 
-###Run the application:
+### Run the application:
 
 python main.py
